@@ -4,13 +4,21 @@ __lua__
 --meteor night
 --by tobiasvl
 function _init()
+  -- tweak these variables
+  debug=false
+  chill_factor=0.01
+  stars_amount=6000
+  canvas=3000
+
+  cartdata("tobiasvl_meteor_night")
   last_mouse,last_x,last_y=0
   s=cocreate(say)
-  debug=true
+  meteors={}
   music(0)
   states={
     intro=0,
     title=1,
+    game_over=2
   }
   sunset_colors={
     --12,
@@ -23,21 +31,27 @@ function _init()
     {0,13}
   }
   state=states.intro
+  
   cam_x,cam_y=0,0
   frame_counter=0
   counter=1
+  credits_y=0
+  
   chilly=true
   chill=0
-  meteors=0
+  
+  meteors_seen=0
+  meteors_high=dget(1)
   poke(0x5f2d,1)
   mouse={x=stat(32),y=stat(33)}
   spr_x=40
 
   stars={}
-  for i=1,6000 do
-    local x,y=flr(rnd(3000)),flr(rnd(3000))
-    add(stars,{x=x-1500,y=y-1500})
+  for i=1,stars_amount do
+    local x,y=flr(rnd(canvas)),flr(rnd(canvas))
+    add(stars,{x=x-(canvas/2),y=y-(canvas/2)})
   end
+  moon={x=flr(rnd(canvas))-(canvas/2),y=flr(rnd(canvas))-(canvas/2)}
 end
 -->8
 --update
@@ -48,33 +62,60 @@ function _update()
   last_mouse=temp_mouse
 
   if state==states.intro then
-    if (btnp(❎)) state=states.title
+    if (btnp(❎) or mouse_pressed) state=states.title
   elseif state==states.title then
     if (btnp(🅾️)) chilly=not chilly
-    if (btnp(❎)) scroll=true
+    if (btnp(❎) or mouse_pressed) scroll=true
     if (cam_y==-80) state=states.play
   elseif state==states.play then
-    if (chilly) chill+=0.001
+    if chilly then
+      if chill>30 then
+        if costatus(s)=="dead" then
+          s=cocreate(say)
+          coresume(s,"home",false)
+        end
+      else
+        chill+=chill_factor
+      end
+    end
+    
     mouse.x,mouse.y=stat(32)+cam_x,stat(33)+cam_y
     if (btnp(⬇️)) mouse.y+=1
-    if (mouse.y>128+cam_y) cam_y+=1
+    if (mouse.y>=128+cam_y) cam_y+=1
     if (btnp(➡️)) mouse.x+=1
-    if (mouse.x>128+cam_x) cam_x+=1
+    if (mouse.x>=128+cam_x) cam_x+=1
     if (btnp(⬆️)) mouse.y-=1
-    if (mouse.y<cam_y) cam_y-=1
+    if (mouse.y<=cam_y) cam_y-=1
     if (btnp(⬅️)) mouse.x-=1
-    if (mouse.x<cam_x) cam_x-=1
+    if (mouse.x<=cam_x) cam_x-=1
 
     if mouse_pressed and costatus(s)=="dead" then
-      if mouse.x>=cam_x+40 then
+      --[[if mouse.x>=cam_x+40 then
         s=cocreate(say)
-        coresume(s,"cold",false)
-      else
+        coresume(s,"cold",false)]]
+      for meteor_data in all(meteors) do
+        if mouse.x>=meteor_data.x-1500-15 and mouse.x<=meteor_data.x-1500+15 and mouse.y>=meteor_data.y-1500-15 and mouse.y<=meteor_data.y-1500+15 then
+          s=cocreate(say)
+          coresume(s,"look",true)
+        end
+      end
+      if costatus(s)=="dead" then
         s=cocreate(say)
         coresume(s,"miss",true)
       end
       mouse_pressed=false
     end
+    
+    if #meteors<100 then
+      add(meteors,create_meteor())
+    end
+    
+    if chilly and meteors_seen>meteors_high then
+      meteors_high=meteors_seen
+      dset(1,meteors_high)
+    end
+  elseif state==states.game_over then
+    credits_y+=1
   end
 end
 -->8
@@ -107,10 +148,19 @@ function _draw()
       pset(star.x,star.y,7)
     end
 
+    if (chilly) center("★"..(scroll and meteors_seen or meteors_high),-cam_y+40,7)
+
     camera(cam_x,cam_y)
     local press="press ❎"
-    if (not scroll and stat(95)%2==0) outline(press,0,30,12,7,true)
-    if (not scroll) outline("chilly mode "..(chilly and "on" or "off"),0,20,chilly and 12 or 1,chilly and 7 or 6,true)
+    if not scroll then
+      if (stat(95)%2==0) outline(press,0,30,12,7,true)
+      if chilly then
+        spr(176,34,20)
+        outline("chill mode",0,20,12,7,true)
+      else
+        outline("chill out mode",0,20,1,6,true)
+      end
+    end
     sspr(0,0,127,127,0,49)
 
     if scroll then
@@ -122,21 +172,28 @@ function _draw()
     camera(cam_x,cam_y)
 
     if debug then
-      cursor(cam_x,cam_y)
+      line(cam_x,cam_y,cam_x,cam_y+127,8)
+      line(cam_x,cam_y,cam_x+127,cam_y,8)
+      line(cam_x,cam_y+127,cam_x+127,cam_y+127,8)
+      line(cam_x+127,cam_y,cam_x+127,cam_y+127,8)
+      cursor(cam_x+1,cam_y+1)
+      color(2)
       print("mouse.y:"..mouse.y)
       print("cam_y:"..cam_y)
       print("mouse.x:"..mouse.x)
       print("cam_x:"..cam_x)
       print("saying:"..(s and costatus(s) or "nil"))
-      line(cam_x,cam_y,cam_x,cam_y+127,8)
-      line(cam_x,cam_y,cam_x+127,cam_y,8)
-      line(cam_x,cam_y+127,cam_x+127,cam_y+127,8)
-      line(cam_x+127,cam_y,cam_x+127,cam_y+127,8)
+      print("mem:"..stat(0))
+      print("fps:"..stat(7).."/"..stat(9))
+      color(stat(1)>=1 and 8 or 2)
+      print("cpu:"..stat(1))
     end
 
     for star in all(stars) do
       pset(star.x,star.y,7)
     end
+    
+    spr(165,moon.x,moon.y)
 
     if chilly then
       spr(176,cam_x+40,cam_y+110)
@@ -145,11 +202,30 @@ function _draw()
       rectfill(cam_x+49,cam_y+111,cam_x+49+flr(chill),cam_y+115,12)
     end
 
+    center("★"..meteors_seen,120,7)
+
     if s and costatus(s)!="dead" then
       coresume(s)
     end
 
+    for meteor_data in all(meteors) do
+      local m=meteor_data.thread
+      if costatus(m)!="dead" then
+        coresume(m)
+      else
+        del(meteors,meteor_data)
+      end
+    end
+
     spr(160,mouse.x,mouse.y)
+  elseif state==states.game_over then
+    cls()
+
+    for star in all(stars) do
+      pset(star.x,star.y,7)
+    end
+    camera(cam_x,credits_y)
+    center("meteor night",cam_y+127,7)
   end
 end
 -->8
@@ -168,6 +244,10 @@ function outline(s,x,y,c1,c2,center)
   print(s,x+1,y+1,c2)
 end
 
+function center(s,y,c)
+  print(s,cam_x+(64-(#s*2)),cam_y+y,c)
+end
+
 function say(situation,initiator)
   local colors={
     [true]=12,
@@ -183,6 +263,23 @@ function say(situation,initiator)
     initiator=not initiator
   end
   convo["action"]()
+end
+
+function create_meteor()
+  local x,y=flr(rnd(3000)),flr(rnd(3000))
+  local m=cocreate(meteor)
+  coresume(m,x,y)
+  return {thread=m,x=x,y=y}
+end
+
+function meteor(x,y)
+  local x_offset,y_offset=flr(rnd(15)),flr(rnd(15))
+  yield()
+  for i=1,120 do
+    if (debug) rect(x-1500,y-1500,x-1500+x_offset,y-1500+15,8)
+    line(x-1500,y-1500,x-1500+x_offset,y-1500+15,7)
+    yield()
+  end
 end
 -->8
 --lines
@@ -203,7 +300,7 @@ lines.look={
     "oh, yeah, look at that!",
     "yeah, wow!"
   },
-  action=function() chill=(chill<10 and 0 or (chill-10)) end
+  action=function() chill=(chill<10 and 0 or (chill-10)) meteors_seen+=1 end
 }
 lines.miss={
   lines["look_initial"],
@@ -247,7 +344,7 @@ lines.home={
     "let's go.",
     "come on."
   },
-  action=function() mode=modes.game_over end
+  action=function() state=states.game_over credits_y=cam_y end
 }
 lines.opening={
   {"we're all made of star stuff."},
