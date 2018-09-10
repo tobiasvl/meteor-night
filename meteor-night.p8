@@ -6,12 +6,12 @@ __lua__
 function _init()
   -- tweak these variables
   debug=false
-  chill_factor=0.01
+  chill_factor=0.003
   stars_amount=6000
   canvas=3000
 
   cartdata("tobiasvl_meteor_night")
-  last_mouse,last_x,last_y=0
+  last_mouse,last_x,last_y=0,0,0
   s=cocreate(say)
   meteors={}
   music(0)
@@ -31,15 +31,15 @@ function _init()
     {0,13}
   }
   state=states.intro
-  
+
   cam_x,cam_y=0,0
   frame_counter=0
   counter=1
   credits_y=0
-  
+
   chilly=true
-  chill=0
-  
+  chill=29
+
   meteors_seen=0
   meteors_high=dget(1)
   poke(0x5f2d,1)
@@ -62,11 +62,18 @@ function _update()
   last_mouse=temp_mouse
 
   if state==states.intro then
-    if (btnp(❎) or mouse_pressed) state=states.title
+    if btnp(❎) or mouse_pressed then
+      title_y=cam_y
+      state=states.title
+    end
   elseif state==states.title then
     if (btnp(🅾️)) chilly=not chilly
     if (btnp(❎) or mouse_pressed) scroll=true
-    if (cam_y==-80) state=states.play
+    if scroll and title_y==cam_y-80 then
+      scroll=false
+      cam_y=title_y
+      state=states.play
+    end
   elseif state==states.play then
     if chilly then
       if chill>30 then
@@ -115,7 +122,14 @@ function _update()
       dset(1,meteors_high)
     end
   elseif state==states.game_over then
-    credits_y+=1
+    if credits_y<cam_y+660 then
+      credits_y+=1
+    else
+      meteors_seen,chill=0,0
+      title_y=credits_y
+      cam_y=title_y
+      state=states.title
+    end
   end
 end
 -->8
@@ -128,13 +142,14 @@ function _draw()
     elseif frame_counter%25==0 then
       counter+=1
     end
-    if (spr_x+40<0) state=states.title
+    if spr_x+40<0 then
+      title_y=cam_y
+      state=states.title
+    end
     cls(sunset_colors[counter][1])
 
     if counter>=#sunset_colors-1 then
-      for star in all(stars) do
-        pset(star.x,star.y,7)
-      end
+      print_stars()
     end
 
     rectfill(0,100,128,128,sunset_colors[counter][2])
@@ -144,28 +159,29 @@ function _draw()
   elseif state==states.title then
     cls()
 
-    for star in all(stars) do
-      pset(star.x,star.y,7)
-    end
+    print_stars()
 
-    if (chilly) center("★"..(scroll and meteors_seen or meteors_high),-cam_y+40,7)
+    camera(cam_x,title_y)
+    
+    if (chilly) center("★"..(scroll and meteors_seen or meteors_high),cam_y+40,7)
 
-    camera(cam_x,cam_y)
     local press="press ❎"
     if not scroll then
-      if (stat(95)%2==0) outline(press,0,30,12,7,true)
+      if (stat(95)%2==0) outline(press,cam_x,title_y+30,12,7,true)
       if chilly then
-        spr(176,34,20)
-        outline("chill mode",0,20,12,7,true)
+        spr(176,cam_x+34,title_y+20)
+        outline("chill mode",0,title_y+20,12,7,true)
       else
-        outline("chill out mode",0,20,1,6,true)
+        outline("chill out mode",0,title_y+20,1,6,true)
       end
     end
-    sspr(0,0,127,127,0,49)
+    palt(0,false)
+    sspr(0,0,127,127,cam_x+0,cam_y+49)
+    palt()
 
     if scroll then
-      cam_y-=1
-      if (cam_y<-60) coresume(s,"opening",true)
+      title_y-=1
+--      if (cam_y<-60) coresume(s,"opening",true)
     end
   elseif state==states.play then
     cls()
@@ -189,9 +205,7 @@ function _draw()
       print("cpu:"..stat(1))
     end
 
-    for star in all(stars) do
-      pset(star.x,star.y,7)
-    end
+    print_stars()
     
     spr(165,moon.x,moon.y)
 
@@ -199,10 +213,10 @@ function _draw()
       spr(176,cam_x+40,cam_y+110)
       rect(cam_x+48,cam_y+110,cam_x+80,cam_y+116,7)
       rectfill(cam_x+49,cam_y+111,cam_x+79,cam_y+115,0)
-      rectfill(cam_x+49,cam_y+111,cam_x+49+flr(chill),cam_y+115,12)
+      rectfill(cam_x+49,cam_y+111,cam_x+49+min(30,flr(chill)),cam_y+115,12)
     end
 
-    center("★"..meteors_seen,120,7)
+    center("★"..meteors_seen,cam_y+120,7)
 
     if s and costatus(s)!="dead" then
       coresume(s)
@@ -221,11 +235,30 @@ function _draw()
   elseif state==states.game_over then
     cls()
 
-    for star in all(stars) do
-      pset(star.x,star.y,7)
-    end
+    print_stars()
+
     camera(cam_x,credits_y)
-    center("meteor night",cam_y+127,7)
+    
+    local co=300
+    center("meteor night",cam_y+co,7)
+    co+=48
+    center("by tobias v. langhoff",cam_y+co,7)
+    co+=64
+    center("music by robby duguay",cam_y+co,7)
+    co+=64    
+    center("based on an idea by",cam_y+co,7)
+    co+=48
+    center("eric caoili,",cam_y+co,7)
+    co+=48
+    center("jc fletcher",cam_y+co,7)
+    co+=48
+    center("and ashley davis",cam_y+co,7)
+    co+=64
+    center("with artwork by ashley davis",cam_y+co,7)
+    co+=24
+    palt(0,false)
+    sspr(0,0,127,127,cam_x,cam_y+co)
+    palt()
   end
 end
 -->8
@@ -245,7 +278,7 @@ function outline(s,x,y,c1,c2,center)
 end
 
 function center(s,y,c)
-  print(s,cam_x+(64-(#s*2)),cam_y+y,c)
+  print(s,cam_x+(64-(#s*2)),y,c)
 end
 
 function say(situation,initiator)
@@ -275,15 +308,60 @@ end
 function meteor(x,y)
   local x_offset,y_offset=flr(rnd(15)),flr(rnd(15))
   yield()
-  for i=1,120 do
+  for i=1,30 do
     if (debug) rect(x-1500,y-1500,x-1500+x_offset,y-1500+15,8)
     line(x-1500,y-1500,x-1500+x_offset,y-1500+15,7)
     yield()
   end
 end
+
+function print_stars()
+  for star in all(stars) do
+    pset(star.x,star.y,7)
+  end
+end
 -->8
 --lines
-lines={}
+lines={
+  opening={
+   {"we're all made of star stuff."},
+   action=function() end
+  },
+  cold={
+    {
+      "brrr.",
+      "i'm chilly.",
+      "it's cold.",
+      "i'm cold.",
+      "are you cold?"
+    },
+    {
+      "come here.",
+      "c'mere.",
+    },
+    {
+      "thanks!",
+      "mmmm.",
+    },
+    action=function() chill=(chill<3 and 0 or (chill-3)) end
+  },
+  home={
+    {
+      "i'm cold. can we go?",
+      "can we go home now?",
+      "do you want to go home?",
+      "wanna go home and crawl under a blanket?",
+      "let's go home and warm up."
+    },
+    {
+      "of course",
+      "sure",
+      "let's go.",
+      "come on."
+    },
+    action=function() state=states.game_over credits_y=cam_y end
+  },
+}
 lines.look_initial={
   "look!",
   "did you see it?",
@@ -311,44 +389,6 @@ lines.miss={
     "hmm, nope..."
   },
   action=function() chill+=5 end
-}
-lines.cold={
-  {
-    "brrr.",
-    "i'm chilly.",
-    "it's cold.",
-    "i'm cold.",
-    "are you cold?"
-  },
-  {
-    "come here.",
-    "c'mere.",
-  },
-  {
-    "thanks!",
-    "mmmm.",
-  },
-  action=function() chill=(chill<3 and 0 or (chill-3)) end
-}
-lines.home={
-  {
-    "i'm cold. can we go?",
-    "can we go home now?",
-    "do you want to go home?",
-    "wanna go home and crawl under a blanket?",
-    "let's go home and warm up."
-  },
-  {
-    "of course",
-    "sure",
-    "let's go.",
-    "come on."
-  },
-  action=function() state=states.game_over credits_y=cam_y end
-}
-lines.opening={
-  {"we're all made of star stuff."},
-  action=function() end
 }
 __gfx__
 0000000000000000000000000000000000d500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
