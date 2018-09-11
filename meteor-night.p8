@@ -116,17 +116,22 @@ function _update()
       end
     end
     
-    mouse.x,mouse.y=stat(32)+cam_x,stat(33)+cam_y
-    if (btnp(⬇️)) mouse.y+=1
+    local x,y=stat(32),stat(33)
+    if x!=old_x or y!=old_y or mouse_pressed then
+      old_x,old_y=x,y
+      mouse.x,mouse.y=x+cam_x,y+cam_y
+    end
+    
+    if (btnp(⬇️)) mouse.y+=10
     if (mouse.y>=128+cam_y) cam_y+=1
-    if (btnp(➡️)) mouse.x+=1
+    if (btnp(➡️)) mouse.x+=10
     if (mouse.x>=128+cam_x) cam_x+=1
-    if (btnp(⬆️)) mouse.y-=1
+    if (btnp(⬆️)) mouse.y-=10
     if (mouse.y<=cam_y) cam_y-=1
-    if (btnp(⬅️)) mouse.x-=1
+    if (btnp(⬅️)) mouse.x-=10
     if (mouse.x<=cam_x) cam_x-=1
 
-    if mouse_pressed and costatus(s)=="dead" then
+    if (btnp(❎) or mouse_pressed) and costatus(s)=="dead" then
       --[[if mouse.x>=cam_x+40 then
         s=cocreate(say)
         coresume(s,"cold",false)]]
