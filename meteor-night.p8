@@ -7,8 +7,8 @@ function _init()
   -- tweak these variables
   debug=false
   chill_factor=0.003
-  stars_amount=6000
-  canvas=3000
+  canvas=2000
+  stars_amount=canvas*2
 
   cartdata("tobiasvl_meteor_night")
   last_mouse,last_x,last_y=0,0,0
@@ -32,13 +32,13 @@ function _init()
   }
   state=states.intro
 
-  cam_x,cam_y=0,0
+  cam_x,cam_y=canvas/2,canvas/2
   frame_counter=0
   counter=1
   credits_y=0
 
   chilly=true
-  chill=29
+  chill=0
 
   meteors_seen=0
   meteors_high=dget(1)
@@ -49,9 +49,18 @@ function _init()
   stars={}
   for i=1,stars_amount do
     local x,y=flr(rnd(canvas)),flr(rnd(canvas))
-    add(stars,{x=x-(canvas/2),y=y-(canvas/2)})
+    add(stars,{x=x,y=y})
+    if x<128 then
+      add(stars,{x=x+canvas,y=y})
+    elseif y<128 then
+      add(stars,{x=x,y=y+canvas})
+    end
+    if x<128 and y<128 then
+      add(stars,{x=x+canvas,y=y+canvas})
+    end
   end
-  moon={x=flr(rnd(canvas))-(canvas/2),y=flr(rnd(canvas))-(canvas/2)}
+
+  moon={x=flr(rnd(canvas)),y=flr(rnd(canvas))}
 end
 -->8
 --update
@@ -67,14 +76,35 @@ function _update()
       state=states.title
     end
   elseif state==states.title then
+    if title_y<=0 then
+      title_y=canvas
+    end
+    
     if (btnp(🅾️)) chilly=not chilly
     if (btnp(❎) or mouse_pressed) scroll=true
+    
+    if scroll then
+      title_y-=1
+    --if (cam_y<-60) coresume(s,"opening",true)
+    end
+    
     if scroll and title_y==cam_y-80 then
       scroll=false
       cam_y=title_y
       state=states.play
     end
   elseif state==states.play then
+    if cam_x>=canvas then
+      cam_x=0
+    elseif cam_x<=0 then
+      cam_x=canvas
+    end
+    if cam_y>=canvas then
+      cam_y=0
+    elseif cam_y<=0 then
+      cam_y=canvas
+    end
+  
     if chilly then
       if chill>30 then
         if costatus(s)=="dead" then
@@ -122,6 +152,11 @@ function _update()
       dset(1,meteors_high)
     end
   elseif state==states.game_over then
+    if credits_y>=canvas then
+      cam_y=-(credits_y-cam_y)
+      credits_y=0
+    end
+    
     if credits_y<cam_y+660 then
       credits_y+=1
     else
@@ -178,31 +213,22 @@ function _draw()
     palt(0,false)
     sspr(0,0,127,127,cam_x+0,cam_y+49)
     palt()
-
-    if scroll then
-      title_y-=1
---      if (cam_y<-60) coresume(s,"opening",true)
-    end
   elseif state==states.play then
     cls()
     camera(cam_x,cam_y)
 
     if debug then
-      line(cam_x,cam_y,cam_x,cam_y+127,8)
-      line(cam_x,cam_y,cam_x+127,cam_y,8)
-      line(cam_x,cam_y+127,cam_x+127,cam_y+127,8)
-      line(cam_x+127,cam_y,cam_x+127,cam_y+127,8)
-      cursor(cam_x+1,cam_y+1)
+      rect(cam_x,cam_y,cam_x+127,cam_y+127,8)
       color(2)
-      print("mouse.y:"..mouse.y)
-      print("cam_y:"..cam_y)
-      print("mouse.x:"..mouse.x)
-      print("cam_x:"..cam_x)
-      print("saying:"..(s and costatus(s) or "nil"))
-      print("mem:"..stat(0))
-      print("fps:"..stat(7).."/"..stat(9))
+      print("mouse.y:"..mouse.y,cam_x+1,cam_y+1)
+      print("cam_y:"..cam_y,cam_x+1,cam_y+7)
+      print("mouse.x:"..mouse.x,cam_x+1,cam_y+13)
+      print("cam_x:"..cam_x,cam_x+1,cam_y+19)
+      print("saying:"..(s and costatus(s) or "nil"),cam_x+1,cam_y+25)
+      print("mem:"..stat(0),cam_x+1,cam_y+31)
+      print("fps:"..stat(7).."/"..stat(9),cam_x+1,cam_y+37)
       color(stat(1)>=1 and 8 or 2)
-      print("cpu:"..stat(1))
+      print("cpu:"..stat(1),cam_x+1,cam_y+43)
     end
 
     print_stars()
