@@ -9,6 +9,7 @@ function _init()
   chill_factor=0.003
   canvas=2000
   stars_amount=canvas*2
+  meteors_amount=100
 
   keyboard=stat(102)!=0 and stat(102)!="www.lexaloffle.com" and stat(102)!="www.playpico.com"
   buttons={o=keyboard and "c" or "🅾️",x=keyboard and "x" or "❎"}
@@ -214,7 +215,7 @@ function _update()
         s=cocreate(say)
         coresume(s,"cold",false)]]
       for meteor_data in all(meteors) do
-        if mouse.x>=meteor_data.x-(canvas/2)-15 and mouse.x<=meteor_data.x-(canvas/2)+15 and mouse.y>=meteor_data.y-(canvas/2)-15 and mouse.y<=meteor_data.y-(canvas/2)+15 then
+        if meteor_data.x>=cam_x and meteor_data.x<=cam_x+127 and meteor_data.y>=cam_y and meteor_data.y<=cam_y+127 then
           s=cocreate(say)
           coresume(s,"look",true)
         end
@@ -230,7 +231,7 @@ function _update()
       mouse_pressed=false
     end
 
-    if #meteors<100 then
+    if #meteors<meteors_amount then
       add(meteors,create_meteor())
     end
 
@@ -419,18 +420,18 @@ function say(situation,initiator)
 end
 
 function create_meteor()
-  local x,y=flr(rnd(3000)),flr(rnd(3000))
+  local x,y=flr(rnd(canvas)),flr(rnd(canvas))
   local m=cocreate(meteor)
   coresume(m,x,y)
   return {thread=m,x=x,y=y}
 end
 
 function meteor(x,y)
-  local x_offset,y_offset=flr(rnd(15)),flr(rnd(15))
+  local x_offset,y_offset=flr(rnd(15)),15
   yield()
   for i=1,30 do
-    if (debug) rect(x-(canvas/2),y-(canvas/2),x-(canvas/2)+x_offset,y-(canvas/2)+15,8)
-    line(x-(canvas/2),y-(canvas/2),x-(canvas/2)+x_offset,y-(canvas/2)+15,7)
+    if (debug) rect(x,y,x+x_offset,y+y_offset,8)
+    line(x,y,x+x_offset,y+y_offset,7)
     yield()
   end
 end
@@ -827,4 +828,3 @@ __music__
 00 03020500
 00 03020500
 02 08010706
-
