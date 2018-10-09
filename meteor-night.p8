@@ -430,8 +430,8 @@ function meteor(x,y)
   local x_offset,y_offset=flr(rnd(15)),15
   yield()
   for i=1,30 do
-    if (debug) rect(x,y,x+x_offset,y+y_offset,8)
-    line(x,y,x+x_offset,y+y_offset,7)
+    if (debug) rect(x,y,x-x_offset,y+y_offset,8)
+    line(x,y,x-x_offset,y+y_offset,7)
     yield()
   end
 end
