@@ -214,15 +214,15 @@ function _update()
       --[[if mouse.x>=cam_x+40 then
         s=cocreate(say)
         coresume(s,"cold",false)]]
+      if mouse.x>=moon.x-20 and mouse.x<=moon.x+20 and mouse.y>=moon.y-20 and mouse.y<=moon.y+20 and costatus(s)=="dead" then
+        s=cocreate(say)
+        coresume(s,"moon",true)
+      end
       for meteor_data in all(meteors) do
         if meteor_data.x>=cam_x and meteor_data.x<=cam_x+127 and meteor_data.y>=cam_y and meteor_data.y<=cam_y+127 then
           s=cocreate(say)
           coresume(s,"look",true)
         end
-      end
-      if mouse.x>=moon.x and mouse.x<=moon.x+16 and mouse.y>moon.y and mouse.y<moon.y and costatus(s)=="dead" then
-        s=cocreate(say)
-        coresume(s,"moon",true)
       end
       if costatus(s)=="dead" then
         s=cocreate(say)
